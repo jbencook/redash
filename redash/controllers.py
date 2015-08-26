@@ -28,6 +28,7 @@ from redash.cache import headers as cache_headers
 from redash.permissions import require_permission
 from redash.query_runner import query_runners, validate_configuration
 from redash.monitor import get_status
+from redash.cli import users
 
 
 @app.route('/ping', methods=['GET'])
@@ -108,6 +109,27 @@ def logout():
     session.pop('openid', None)
 
     return redirect('/login')
+
+
+@app.route('/users/new', methods=['POST'])
+@require_permission('admin')
+def signup():
+    data = request.get_json(force=True)
+    name = data.get('name', None)
+    email = data.get('email', None)
+    password = data.get('password', None)
+
+    if not name or not email or not password:
+        logging.error("Bad request, {}, {}, {}".format(name, email, password))
+        abort(400)
+    else:
+        users.create(name=name,
+                     email=email,
+                     groups=['default'],
+                     password=password)
+        logging.info("User {} created".format(name))
+        return make_response("OK", 200)
+
 
 @app.route('/status.json')
 @login_required
